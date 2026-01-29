@@ -11,17 +11,48 @@
             box-sizing: border-box;
         }
 
+        html {
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Estilo da scrollbar para mobile */
+        .camera-section::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .camera-section::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+        }
+
+        .camera-section::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+        }
+
+        .camera-section::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
         body {
             font-family: Arial, sans-serif;
             background: black;
             overflow: hidden;
             color: white;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            width: 100%;
+            height: 100%;
+            touch-action: none; /* Previne gestos padrão do navegador em touch screens */
         }
 
         .container {
             display: flex;
             height: 100vh;
             width: 100vw;
+            position: relative;
         }
 
         .camera-section {
@@ -35,6 +66,7 @@
         .canvas-section {
             width: 70%;
             position: relative;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
         }
 
         #videoElement {
@@ -58,6 +90,7 @@
             width: 100%;
             height: 100%;
             display: block;
+            border-radius: 10px;
         }
 
         .info-panel {
@@ -153,6 +186,343 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* ========== RESPONSIVIDADE ========== */
+        
+        /* Tablets em modo paisagem e telas médias */
+        @media (max-width: 1024px) {
+            .camera-section {
+                width: 35%;
+                padding: 15px;
+                gap: 12px;
+            }
+
+            .canvas-section {
+                width: 65%;
+            }
+
+            .info-panel {
+                padding: 12px;
+                font-size: 13px;
+            }
+
+            .info-panel h3 {
+                font-size: 16px;
+            }
+
+            .controls h3 {
+                font-size: 15px;
+            }
+
+            .controls li {
+                font-size: 12px;
+            }
+        }
+
+        /* Tablets em modo retrato */
+        @media (max-width: 768px) and (min-width: 481px) {
+            .container {
+                flex-direction: column-reverse; /* Canvas em cima, câmera embaixo */
+            }
+
+            .camera-section {
+                width: 100%;
+                padding: 15px;
+                height: auto;
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 10px;
+                border-top: 2px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .canvas-section {
+                width: 100%;
+                height: 60vh;
+                order: -1;
+                padding: 15px;
+            }
+
+            .video-container {
+                width: 48%;
+                order: 1;
+            }
+
+            .status {
+                width: 48%;
+                order: 2;
+            }
+
+            .info-panel {
+                width: 48%;
+                order: 3;
+            }
+
+            .controls {
+                width: 48%;
+                order: 4;
+            }
+
+            #videoElement {
+                border-radius: 10px;
+            }
+
+            #canvasElement {
+                border-radius: 10px;
+            }
+        }
+
+        /* Smartphones em modo paisagem */
+        @media (max-width: 768px) and (orientation: landscape) {
+            .container {
+                flex-direction: row;
+            }
+
+            .camera-section {
+                width: 35%;
+                height: 100vh;
+                flex-direction: column;
+                overflow-y: auto;
+            }
+
+            .canvas-section {
+                width: 65%;
+                height: 100vh;
+            }
+
+            /* Mantém vídeo oculto em smartphones pequenos mesmo em paisagem */
+            @media (max-width: 480px) {
+                .video-container {
+                    display: none;
+                }
+
+                .camera-section {
+                    width: 30%;
+                }
+
+                .canvas-section {
+                    width: 70%;
+                }
+
+                /* Aviso sobre câmera oculta em paisagem */
+                .controls::after {
+                    content: "📷 Câmera ativa";
+                    font-size: 10px;
+                    padding: 6px;
+                    margin-top: 8px;
+                }
+            }
+
+            .video-container,
+            .status,
+            .info-panel,
+            .controls {
+                width: 100%;
+            }
+        }
+
+        /* Smartphones em modo retrato */
+        @media (max-width: 480px) {
+            .container {
+                flex-direction: column-reverse; /* Inverte a ordem: canvas em cima, câmera embaixo */
+            }
+
+            .camera-section {
+                width: 100%;
+                padding: 10px;
+                flex-direction: column;
+                gap: 8px;
+                height: auto;
+                max-height: 35vh; /* Limita altura da seção da câmera */
+                overflow-y: auto; /* Permite scroll se necessário */
+                border-top: 2px solid rgba(255, 255, 255, 0.1); /* Separador visual */
+            }
+
+            .canvas-section {
+                width: 100%;
+                height: 65vh; /* Aumenta altura do canvas 3D */
+                min-height: 400px;
+                order: -1; /* Garante que fique no topo */
+                padding: 10px; /* Adiciona espaçamento */
+            }
+
+            /* Oculta o vídeo da câmera em celulares */
+            .video-container {
+                display: none;
+            }
+
+            .status,
+            .info-panel,
+            .controls {
+                width: 100%;
+            }
+
+            .status {
+                padding: 8px;
+                font-size: 13px;
+                order: 1;
+            }
+
+            .info-panel {
+                padding: 10px;
+                font-size: 12px;
+                order: 2;
+            }
+
+            .info-panel h3 {
+                font-size: 14px;
+                margin-bottom: 8px;
+            }
+
+            .info-panel p {
+                margin: 3px 0;
+            }
+
+            .controls {
+                padding: 10px;
+                order: 3;
+            }
+
+            .controls h3 {
+                font-size: 14px;
+                margin-bottom: 8px;
+            }
+
+            .controls li {
+                font-size: 11px;
+                margin: 6px 0;
+            }
+
+            /* Adiciona aviso sobre câmera oculta */
+            .controls::after {
+                content: "📷 Câmera detectando sua mão";
+                display: block;
+                margin-top: 10px;
+                padding: 8px;
+                background: rgba(76, 175, 80, 0.25);
+                border: 1px solid rgba(76, 175, 80, 0.3);
+                border-radius: 6px;
+                font-size: 11px;
+                text-align: center;
+                font-weight: 500;
+            }
+
+            .loading {
+                padding: 20px 30px;
+                width: 80%;
+                max-width: 300px;
+            }
+
+            .loading h2 {
+                font-size: 18px;
+            }
+
+            .loading p {
+                font-size: 12px;
+            }
+        }
+
+        /* Smartphones muito pequenos */
+        @media (max-width: 360px) {
+            .canvas-section {
+                height: 68vh;
+                min-height: 350px;
+                padding: 8px;
+            }
+
+            .camera-section {
+                max-height: 32vh;
+                padding: 8px;
+            }
+
+            .info-panel {
+                font-size: 11px;
+                padding: 8px;
+            }
+
+            .info-panel h3 {
+                font-size: 13px;
+            }
+
+            .info-panel p {
+                margin: 2px 0;
+            }
+
+            .controls {
+                padding: 8px;
+            }
+
+            .controls li {
+                font-size: 10px;
+                padding-left: 15px;
+                margin: 4px 0;
+            }
+
+            .status {
+                font-size: 12px;
+                padding: 6px;
+            }
+        }
+
+        /* Smartphones muito pequenos em modo paisagem */
+        @media (max-height: 500px) and (orientation: landscape) {
+            .camera-section {
+                padding: 8px;
+                gap: 6px;
+                overflow-y: auto;
+            }
+
+            .info-panel,
+            .controls {
+                padding: 6px;
+            }
+
+            .info-panel h3,
+            .controls h3 {
+                font-size: 12px;
+                margin-bottom: 4px;
+            }
+
+            .info-panel p,
+            .controls li {
+                font-size: 10px;
+                margin: 2px 0;
+            }
+
+            .controls li {
+                padding-left: 12px;
+            }
+
+            .status {
+                padding: 5px;
+                font-size: 11px;
+            }
+
+            /* Reduz aviso em telas muito baixas */
+            .controls::after {
+                font-size: 10px;
+                padding: 5px;
+                margin-top: 6px;
+            }
+        }
+
+        /* Ajustes para telas muito grandes */
+        @media (min-width: 1920px) {
+            .info-panel {
+                font-size: 16px;
+            }
+
+            .info-panel h3 {
+                font-size: 20px;
+            }
+
+            .controls h3 {
+                font-size: 18px;
+            }
+
+            .controls li {
+                font-size: 15px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -224,9 +594,19 @@
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x1a1a2e);
 
+        // Função para obter dimensões do canvas
+        function getCanvasDimensions() {
+            const canvasSection = document.querySelector('.canvas-section');
+            return {
+                width: canvasSection.clientWidth,
+                height: canvasSection.clientHeight
+            };
+        }
+
+        const dimensions = getCanvasDimensions();
         const camera = new THREE.PerspectiveCamera(
             75,
-            window.innerWidth * 0.7 / window.innerHeight,
+            dimensions.width / dimensions.height,
             0.1,
             1000
         );
@@ -236,7 +616,7 @@
             canvas: threeCanvas,
             antialias: true
         });
-        renderer.setSize(window.innerWidth * 0.7, window.innerHeight);
+        renderer.setSize(dimensions.width, dimensions.height);
         renderer.setPixelRatio(window.devicePixelRatio);
 
         // Iluminação
@@ -285,12 +665,25 @@
         hands.onResults(onResults);
 
         // ========== CAMERA SETUP ==========
+        // Determinar resolução da câmera baseado no tamanho da tela
+        function getCameraResolution() {
+            const width = window.innerWidth;
+            if (width <= 480) {
+                return { width: 320, height: 240 };
+            } else if (width <= 768) {
+                return { width: 480, height: 360 };
+            } else {
+                return { width: 640, height: 480 };
+            }
+        }
+
+        const cameraRes = getCameraResolution();
         const cameraStream = new Camera(videoElement, {
             onFrame: async () => {
                 await hands.send({ image: videoElement });
             },
-            width: 640,
-            height: 480
+            width: cameraRes.width,
+            height: cameraRes.height
         });
 
         // ========== PROCESSAMENTO DOS RESULTADOS ==========
@@ -414,13 +807,19 @@
         }
 
         // Redimensionar canvas quando a janela mudar
-        window.addEventListener('resize', () => {
-            const width = window.innerWidth * 0.7;
-            const height = window.innerHeight;
+        function handleResize() {
+            const dimensions = getCanvasDimensions();
             
-            camera.aspect = width / height;
+            camera.aspect = dimensions.width / dimensions.height;
             camera.updateProjectionMatrix();
-            renderer.setSize(width, height);
+            renderer.setSize(dimensions.width, dimensions.height);
+        }
+
+        window.addEventListener('resize', handleResize);
+        
+        // Adicionar suporte para mudança de orientação em dispositivos móveis
+        window.addEventListener('orientationchange', () => {
+            setTimeout(handleResize, 100); // Delay para garantir que as dimensões sejam atualizadas
         });
 
         // Iniciar quando a página carregar
