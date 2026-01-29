@@ -1,2 +1,3 @@
 # esfera_3d
-Controlar esfera 3d com a mão
+Controlar esfera 3d com a mão.... 
+Para acessa-lo clique no link: https://akiramath.github.io/esfera_3d/
