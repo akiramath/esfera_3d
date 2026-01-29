@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Esfera 3D com Mão</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: black;
+            overflow: hidden;
+            color: white;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .camera-section {
+            width: 30%;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .canvas-section {
+            width: 70%;
+            position: relative;
+        }
+
+        #videoElement {
+            width: 100%;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transform: scaleX(-1);
+        }
+
+        #canvasElement {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            transform: scaleX(-1);
+            border-radius: 15px;
+            pointer-events: none;
+        }
+
+        #threeCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .info-panel h3 {
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .info-panel p {
+            margin: 5px 0;
+            opacity: 0.9;
+        }
+
+        .status {
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .status.active {
+            background: rgba(76, 175, 80, 0.3);
+        }
+
+        .controls {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .controls h3 {
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .controls ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .controls li {
+            margin: 8px 0;
+            padding-left: 20px;
+            position: relative;
+            font-size: 13px;
+        }
+
+        .controls li:before {
+            position: absolute;
+            left: 0;
+        }
+
+        .video-container {
+            position: relative;
+        }
+
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 30px 50px;
+            border-radius: 15px;
+            text-align: center;
+            z-index: 1000;
+        }
+
+        .loading h2 {
+            margin-bottom: 15px;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">
+        <h2>Carregando...</h2>
+        <div class="spinner"></div>
+        <p>Inicializando câmera e detector de mãos</p>
+    </div>
+
+    <div class="container">
+        <div class="camera-section">
+            <div class="status" id="status">
+                Aguardando câmera...
+            </div>
+
+            <div class="video-container">
+                <video id="videoElement" autoplay playsinline></video>
+                <canvas id="canvasElement"></canvas>
+            </div>
+
+            <div class="info-panel">
+                <h3>Informações</h3>
+                <p>Rotação X: <span id="posX">0</span>°</p>
+                <p>Rotação Y: <span id="posY">0</span>°</p>
+                <p>Escala: <span id="distance">1.0</span>x</p>
+                <p>Inclinação: <span id="rotation">0°</span></p>
+            </div>
+
+            <div class="controls">
+                <h3>Controles</h3>
+                <ul>
+                    <li>Mova sua mão para rotacionar</li>
+                    <li>Afaste/aproxime dedos para aumentar/diminuir</li>
+                    <li>Incline a mão para rotação adicional</li>
+                    <li>Sem mão = esfera parada</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="canvas-section">
+            <canvas id="threeCanvas"></canvas>
+        </div>
+    </div>
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- MediaPipe Hands -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+
+    <script>
+        // Elementos DOM
+        const videoElement = document.getElementById('videoElement');
+        const canvasElement = document.getElementById('canvasElement');
+        const canvasCtx = canvasElement.getContext('2d');
+        const threeCanvas = document.getElementById('threeCanvas');
+        const loading = document.getElementById('loading');
+        const status = document.getElementById('status');
+
+        // Variáveis para controle
+        let handDetected = false;
+        let handPosition = { x: 0, y: 0, z: 0 };
+        let handDistance = 0;
+        let handRotation = 0;
+
+        // ========== THREE.JS SETUP ==========
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a2e);
+
+        const camera = new THREE.PerspectiveCamera(
+            75,
+            window.innerWidth * 0.7 / window.innerHeight,
+            0.1,
+            1000
+        );
+        camera.position.z = 5;
+
+        const renderer = new THREE.WebGLRenderer({
+            canvas: threeCanvas,
+            antialias: true
+        });
+        renderer.setSize(window.innerWidth * 0.7, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+
+        // Iluminação
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+
+        const pointLight = new THREE.PointLight(0xffffff, 1);
+        pointLight.position.set(5, 5, 5);
+        scene.add(pointLight);
+
+        const pointLight2 = new THREE.PointLight(0x00ffff, 0.5);
+        pointLight2.position.set(-5, -5, 5);
+        scene.add(pointLight2);
+
+        // Criar esfera transparente apenas com wireframe branco
+        const wireframeGeometry = new THREE.SphereGeometry(1, 32, 32);
+        const wireframeMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff,  // Branco
+            wireframe: true,
+            transparent: true,
+            opacity: 1
+        });
+        const sphere = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
+        scene.add(sphere);
+
+        // Variáveis para controle de rotação
+        let targetRotationX = 0;
+        let targetRotationY = 0;
+        let targetRotationZ = 0;
+        let previousHandPosition = { x: 0, y: 0 };
+
+        // ========== MEDIAPIPE HANDS SETUP ==========
+        const hands = new Hands({
+            locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+            }
+        });
+
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        hands.onResults(onResults);
+
+        // ========== CAMERA SETUP ==========
+        const cameraStream = new Camera(videoElement, {
+            onFrame: async () => {
+                await hands.send({ image: videoElement });
+            },
+            width: 640,
+            height: 480
+        });
+
+        // ========== PROCESSAMENTO DOS RESULTADOS ==========
+        function onResults(results) {
+            // Ajustar tamanho do canvas
+            canvasElement.width = videoElement.videoWidth;
+            canvasElement.height = videoElement.videoHeight;
+
+            // Limpar canvas
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                handDetected = true;
+                status.textContent = '✅ Mão detectada!';
+                status.classList.add('active');
+
+                const landmarks = results.multiHandLandmarks[0];
+
+                // Desenhar landmarks
+                drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {
+                    color: '#00FF00',
+                    lineWidth: 5
+                });
+                drawLandmarks(canvasCtx, landmarks, {
+                    color: '#FF0000',
+                    lineWidth: 2,
+                    radius: 5
+                });
+
+                // Processar posição da mão
+                processHandMovement(landmarks);
+            } else {
+                handDetected = false;
+                status.textContent = '👋 Mostre sua mão';
+                status.classList.remove('active');
+            }
+
+            canvasCtx.restore();
+        }
+
+        function processHandMovement(landmarks) {
+            // Pegar centro da palma (landmark 9)
+            const palm = landmarks[9];
+            
+            // Pegar ponta do indicador (landmark 8)
+            const indexFinger = landmarks[8];
+            
+            // Pegar polegar (landmark 4)
+            const thumb = landmarks[4];
+
+            // Normalizar posição X e Y (inverter para movimento natural)
+            handPosition.x = (palm.x - 0.5) * 8;
+            handPosition.y = -(palm.y - 0.5) * 8;
+            handPosition.z = -palm.z * 3;
+
+            // Calcular distância entre polegar e indicador (para escala)
+            const dx = indexFinger.x - thumb.x;
+            const dy = indexFinger.y - thumb.y;
+            const dz = indexFinger.z - thumb.z;
+            handDistance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+
+            // Calcular rotação baseada na orientação da mão
+            const wrist = landmarks[0];
+            const middleFinger = landmarks[12];
+            handRotation = Math.atan2(
+                middleFinger.y - wrist.y,
+                middleFinger.x - wrist.x
+            );
+
+            // Atualizar UI
+            document.getElementById('posX').textContent = (targetRotationX * 180 / Math.PI).toFixed(0);
+            document.getElementById('posY').textContent = (targetRotationY * 180 / Math.PI).toFixed(0);
+            document.getElementById('distance').textContent = (0.5 + handDistance * 3).toFixed(2);
+            document.getElementById('rotation').textContent = (handRotation * 180 / Math.PI).toFixed(0);
+        }
+
+        // ========== ANIMAÇÃO THREE.JS ==========
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (handDetected) {
+                // Calcular movimento da mão para rotação
+                const deltaX = handPosition.x - previousHandPosition.x;
+                const deltaY = handPosition.y - previousHandPosition.y;
+                
+                // Acumular rotação baseada no movimento da mão
+                targetRotationY += deltaX * 0.5;
+                targetRotationX += deltaY * 0.5;
+                
+                // Aplicar rotação suave
+                sphere.rotation.y += (targetRotationY - sphere.rotation.y) * 0.1;
+                sphere.rotation.x += (targetRotationX - sphere.rotation.x) * 0.1;
+                sphere.rotation.z += (handRotation - sphere.rotation.z) * 0.1;
+
+                // Escalar baseado na distância entre dedos
+                const targetScale = 0.5 + handDistance * 3;
+                sphere.scale.x += (targetScale - sphere.scale.x) * 0.1;
+                sphere.scale.y += (targetScale - sphere.scale.y) * 0.1;
+                sphere.scale.z += (targetScale - sphere.scale.z) * 0.1;
+
+                // Atualizar posição anterior
+                previousHandPosition.x = handPosition.x;
+                previousHandPosition.y = handPosition.y;
+            }
+            // Quando não há mão, a esfera fica parada
+
+            renderer.render(scene, camera);
+        }
+
+        // ========== INICIALIZAÇÃO ==========
+        async function init() {
+            try {
+                await cameraStream.start();
+                loading.style.display = 'none';
+                animate();
+            } catch (error) {
+                console.error('Erro ao iniciar câmera:', error);
+                loading.innerHTML = '<h2>❌ Erro</h2><p>Não foi possível acessar a câmera</p>';
+            }
+        }
+
+        // Redimensionar canvas quando a janela mudar
+        window.addEventListener('resize', () => {
+            const width = window.innerWidth * 0.7;
+            const height = window.innerHeight;
+            
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        });
+
+        // Iniciar quando a página carregar
+        init();
+    </script>
+</body>
+</html>
